@@ -12,6 +12,7 @@ package org.pih.warehouse.core
 import org.pih.warehouse.inventory.InventoryItem
 import org.pih.warehouse.product.Product
 import org.springframework.transaction.TransactionStatus
+import org.grails.plugins.csv.CSVWriter
 
 class OrganizationController {
 
@@ -37,6 +38,28 @@ class OrganizationController {
                     'in'("roleType", roleTypes)
                 }
             }
+        }
+        if (params.format && organizationInstanceList) {
+            def sw = new StringWriter()
+            def csv = new CSVWriter(sw, {
+                "Id" { it.id }
+                "Code" { it.code }
+                "Name" { it.name }
+                "Default location" { it.defaultLocation }
+                "Roles" { it.roles }
+            })
+
+            organizationInstanceList.each { organization ->
+                csv << [
+                        id              : organization.id,
+                        code            : organization.code,
+                        name            : organization.name,
+                        defaultLocation : organization.defaultLocation ?: '',
+                        roles           : organization.roles.join(","),
+                ]
+            }
+            response.setHeader("Content-disposition", "attachment; filename=\"Organizations-${new Date().format("MM/dd/yyyy")}.csv\"")
+            render(contentType: "text/csv", text: sw.toString(), encoding: "UTF-8")
         }
         render(view: "list", model: [organizationInstanceList:organizationInstanceList, organizationInstanceTotal:organizationInstanceList.totalCount])
     }
